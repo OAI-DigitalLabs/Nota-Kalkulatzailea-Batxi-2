@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="eu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Batxi 2 nota kalkulatzailea</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout: goiburua + ebaluazio-fitxak + laburpen-banda + ikasgai-txartelen sareta (2 zutabe, mugikorrean 1) */
+  --paper: #f4f6f8;
+  --surface: #ffffff;
+  --ink: #16202b;
+  --muted: #5d6b7a;
+  --line: #d9dfe6;
+  --accent: #b3222c;
+  --accent-soft: #f8e3e4;
+  --good: #1d7a46;
+  --good-soft: #def2e6;
+  --warn: #9a6400;
+  --warn-soft: #fbf0d6;
+  --bad: #b3222c;
+  --bad-soft: #f8e3e4;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10161d; --surface: #18212b; --ink: #e8edf2; --muted: #9aa8b6; --line: #2b3744;
+    --accent: #ff6b72; --accent-soft: #3a1d21;
+    --good: #5fd18f; --good-soft: #17352a; --warn: #f0b84d; --warn-soft: #3a2f16; --bad: #ff6b72; --bad-soft: #3a1d21;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10161d; --surface: #18212b; --ink: #e8edf2; --muted: #9aa8b6; --line: #2b3744;
+  --accent: #ff6b72; --accent-soft: #3a1d21;
+  --good: #5fd18f; --good-soft: #17352a; --warn: #f0b84d; --warn-soft: #3a2f16; --bad: #ff6b72; --bad-soft: #3a1d21;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 20px; }
+header { display: grid; gap: 6px; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 4vw, 36px); line-height: 1.1; margin: 0; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.lead { color: var(--muted); max-width: 65ch; margin: 0; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 2px solid var(--line); }
+.tab { font: 600 15px var(--font-body); color: var(--muted); background: none; border: none; padding: 10px 14px; border-bottom: 3px solid transparent; margin-bottom: -2px; cursor: pointer; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.summary { display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; min-width: 170px; display: grid; gap: 2px; }
+.stat .k { font-size: 13px; color: var(--muted); }
+.stat .v { font-family: var(--font-display); font-weight: 800; font-size: 28px; font-variant-numeric: tabular-nums; }
+.settings { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-size: 14px; color: var(--muted); margin-left: auto; }
+.settings label { display: flex; gap: 6px; align-items: center; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 500px), 1fr)); gap: 16px; align-items: start; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; display: grid; }
+.card-head { display: flex; gap: 12px; align-items: center; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+.card-head h2 { font-family: var(--font-display); font-weight: 600; font-size: 19px; margin: 0; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.big { font-family: var(--font-display); font-weight: 800; font-size: 26px; font-variant-numeric: tabular-nums; }
+.chip { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--paper); color: var(--muted); white-space: nowrap; }
+.chip.r10 { background: var(--good-soft); color: var(--good); }
+.chip.rlow { background: var(--warn-soft); color: var(--warn); }
+.chip.rfail { background: var(--bad-soft); color: var(--bad); }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); text-align: left; padding: 8px 6px 4px; white-space: nowrap; }
+td { padding: 4px 6px; vertical-align: middle; }
+.items td:first-child, .items th:first-child { padding-left: 16px; }
+.items td:last-child, .items th:last-child { padding-right: 12px; }
+input[type="text"], select { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; width: 100%; }
+input.num { width: 64px; text-align: right; }
+input.bad { border-color: var(--bad); background: var(--bad-soft); }
+input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); }
+.need { font-size: 13px; white-space: nowrap; }
+.need.ok { color: var(--good); font-weight: 600; }
+.need.no { color: var(--bad); font-weight: 600; }
+.need.go { color: var(--ink); font-weight: 700; }
+.iconbtn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 4px 6px; border-radius: 6px; }
+.iconbtn:hover { color: var(--bad); background: var(--bad-soft); }
+.card-foot { padding: 10px 16px 14px; display: grid; gap: 8px; border-top: 1px solid var(--line); font-size: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.row label { display: flex; gap: 6px; align-items: center; }
+.row select { width: auto; }
+.note { color: var(--muted); font-size: 13px; }
+.warn { color: var(--warn); font-size: 13px; font-weight: 600; }
+.btn { font: 600 14px var(--font-body); border-radius: 8px; padding: 7px 12px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.btn:hover { border-color: var(--ink); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.danger { color: var(--bad); }
+.btn.link { border: none; background: none; color: var(--muted); padding: 4px 0; text-decoration: underline; }
+.add { background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 10px; }
+.add h2 { font-family: var(--font-display); font-weight: 600; font-size: 18px; margin: 0; }
+.add .row input[type="text"] { width: min(100%, 260px); }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.course { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.course table th, .course table td { padding: 10px 14px; border-bottom: 1px solid var(--line); text-align: right; }
+.course table th:first-child, .course table td:first-child { text-align: left; }
+.course tfoot td { font-weight: 700; border-bottom: none; }
+.final { font-weight: 800; }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+footer { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+@media (prefers-reduced-motion: no-preference) { .tab, .btn { transition: color .15s, border-color .15s, background .15s; } }
+@media (max-width: 520px) { .stat { min-width: 0; flex: 1 1 140px; } .settings { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Batxi 2 <span>nota kalkulatzailea</span></h1>
+    <p class="lead">Sartu zure notak eta ikusi ebaluazioko nota, batez bestekoa eta nota igotzeko zer atera behar duzun. Pisuak 1. ebaluaziokoak dira: aldatu itzazu irakasleak beste batzuk ematen baditu. Notak zure nabigatzailean bakarrik gordetzen dira.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-view="0" id="tab-0">1. ebaluazioa</button>
+    <button class="tab" role="tab" data-view="1" id="tab-1">2. ebaluazioa</button>
+    <button class="tab" role="tab" data-view="2" id="tab-2">3. ebaluazioa</button>
+    <button class="tab" role="tab" data-view="course" id="tab-course">Ikasturtea</button>
+  </nav>
+
+  <section class="summary" id="summary"></section>
+  <main id="main"></main>
+
+  <footer>
+    <span>Igoeran behar duzun nota: azterketa hori bakarrik errepikatuta, gainerakoak berdin mantenduta.</span>
+    <span id="resetZone"><button class="btn link" id="resetBtn" type="button">Ezabatu nire notak</button></span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var KEY = "batxi2-nota-kalkulatzailea-v1";
+
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+  function it(name, w, exam) { return { id: uid(), name: name, w: w, g: null, exam: !!exam }; }
+
+  function defaultSubjects() {
+    return [
+      { id: "gaz", name: "Gaztelania", items: [it("Azterketa", null, true), it("Liburua", null, false), it("Idazlana", null, false)] },
+      { id: "mat", name: "Matematika", items: [it("1. azterketa", 50, true), it("2. azterketa", 50, true)] },
+      { id: "fil", name: "Filosofiaren historia", items: [it("1. azterketa", 10, true), it("2. azterketa", 40, true), it("3. azterketa", 40, true), it("Idazlana", 5, false), it("Jarrera", 5, false)] },
+      { id: "ing", name: "Ingelesa", items: [it("Azterketa", 70, true), it("1. idazlana", 10, false), it("2. idazlana", 10, false), it("Jarrera", 10, false)] },
+      { id: "eus", name: "Euskara", euskara: true, items: [it("Azterketa", 50, true), it("Liburua", 20, false), it("1. idazlana", 10, false), it("2. idazlana", 20, false)] },
+      { id: "fis", name: "Fisika", items: [it("1. azterketa", 45, true), it("2. azterketa", 45, true), it("Jarrera", 10, false)] },
+      { id: "his", name: "Historia", items: [it("1. azterketa", 20, true), it("2. azterketa", 30, true), it("3. azterketa", 50, true)] },
+      { id: "tek", name: "Teknologia", items: [it("Ebaluazioko nota", 100, false)] },
+      { id: "mar", name: "Marrazketa teknikoa", items: [it("1. azterketa", 35, true), it("2. azterketa", 35, true), it("Laminak", 25, false), it("Jarrera", 5, false)] }
+    ];
+  }
+  function cloneSubjects(list) {
+    return list.map(function (s) {
+      return { id: s.id, name: s.name, euskara: !!s.euskara, target: 10,
+        items: s.items.map(function (i) { return { id: uid(), name: i.name, w: i.w, g: null, exam: i.exam }; }) };
+    });
+  }
+  function freshState() {
+    var base = defaultSubjects();
+    return { v: 1, roundFrom: 0.5, c1: false, view: 0, evals: [0, 1, 2].map(function () { return { subjects: cloneSubjects(base) }; }) };
+  }
+
+  var state;
+  try { state = JSON.parse(localStorage.getItem(KEY)); } catch (e) { state = null; }
+  if (!state || state.v !== 1 || !state.evals) state = freshState();
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  // ---------- kalkuluak ----------
+  function num(v) { return (v === null || v === undefined || v === "" || isNaN(v)) ? null : Number(v); }
+  function roundGrade(x) {
+    var f = Math.floor(x + 1e-9);
+    return (x - f + 1e-9 >= state.roundFrom) ? f + 1 : f;
+  }
+  function bonus(s) { return (s.euskara && state.c1) ? 1 : 0; }
+  function calc(s) {
+    var graded = s.items.filter(function (i) { return num(i.g) !== null; });
+    var r = { grade: null, evaluated: null, rounded: null, needs: {}, pendingNeed: null, wSum: 0, anyW: false };
+    var total = 0;
+    s.items.forEach(function (i) { var w = num(i.w); if (w && w > 0) { total += w; r.anyW = true; } });
+    r.wSum = total;
+    if (!graded.length) return r;
+    var thr = (num(s.target) || 10) - state.roundFrom - bonus(s);
+    if (!r.anyW) {
+      var sum = 0; graded.forEach(function (i) { sum += num(i.g); });
+      r.grade = sum / graded.length;
+    } else {
+      var W = 0, S = 0;
+      graded.forEach(function (i) { var w = num(i.w); if (w && w > 0) { W += w; S += num(i.g) * w; } });
+      if (W === 0) {
+        var s2 = 0; graded.forEach(function (i) { s2 += num(i.g); }); r.grade = s2 / graded.length;
+      } else {
+        r.grade = S / W;
+        r.evaluated = W / total;
+        graded.forEach(function (i) {
+          var w = num(i.w);
+          if (i.exam && w && w > 0) r.needs[i.id] = (thr * W - (S - num(i.g) * w)) / w;
+        });
+        var pendW = total - W;
+        if (pendW > 1e-9) r.pendingNeed = (thr * total - S) / pendW;
+      }
+    }
+    r.rounded = roundGrade(r.grade);
+    return r;
+  }
+  function fmt(x, d) { if (x === null || x === undefined || isNaN(x)) return "–"; return x.toFixed(d === undefined ? 2 : d).replace(".", ","); }
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function parseInput(v) { v = String(v).trim().replace(",", "."); if (v === "") return null; var n = Number(v); return isNaN(n) ? NaN : n; }
+  function chipClass(rd) { if (rd === null) return ""; if (rd >= 10) return "r10"; if (rd < 5) return "rfail"; if (rd < 7) return "rlow"; return ""; }
+  function needHtml(v, g) {
+    if (v === undefined || v === null) return '<span class="need">–</span>';
+    if (v <= g + 1e-9) return '<span class="need ok">Ez da behar</span>';
+    if (v > 10 + 1e-9) return '<span class="need no">Ezinezkoa (' + fmt(v) + ')</span>';
+    return '<span class="need go">' + fmt(v) + '</span>';
+  }
+
+  // ---------- marrazketa ----------
+  var main = document.getElementById("main");
+  var summary = document.getElementById("summary");
+
+  function render() {
+    document.querySelectorAll(".tab").forEach(function (b) {
+      b.setAttribute("aria-selected", String(b.dataset.view === String(state.view)));
+    });
+    if (state.view === "course") renderCourse(); else renderEval(state.view);
+    renderSummary();
+  }
+
+  function settingsHtml() {
+    return '<div class="settings">' +
+      '<label for="roundFrom">Biribiltzea, hamartarra hemendik gora:</label>' +
+      '<select id="roundFrom">' + [0.5, 0.6, 0.7, 0.8, 0.9].map(function (v) {
+        return '<option value="' + v + '"' + (state.roundFrom === v ? " selected" : "") + '>' + fmt(v, 1) + '</option>';
+      }).join("") + '</select></div>';
+  }
+
+  function renderSummary() {
+    var html = "";
+    if (state.view === "course") {
+      var c = courseData();
+      html += stat("Ikasturteko batez bestekoa", fmt(c.avg)) + stat("Azken noten batez bestekoa", fmt(c.avgFinal));
+    } else {
+      var subs = state.evals[state.view].subjects, gs = [], rs = [];
+      subs.forEach(function (s) { var r = calc(s); if (r.grade !== null) { gs.push(r.grade); rs.push(r.rounded); } });
+      html += stat("Ebaluazioko batez bestekoa", fmt(avg(gs))) + stat("Biribildutako noten batez bestekoa", fmt(avg(rs))) +
+        stat("Notadun ikasgaiak", gs.length + " / " + subs.length);
+    }
+    summary.innerHTML = html + settingsHtml();
+    document.getElementById("roundFrom").addEventListener("change", function (e) {
+      state.roundFrom = Number(e.target.value); save(); render();
+    });
+  }
+  function stat(k, v) { return '<div class="stat"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>'; }
+  function avg(a) { if (!a.length) return null; var s = 0; a.forEach(function (x) { s += x; }); return s / a.length; }
+
+  function renderEval(e) {
+    var subs = state.evals[e].subjects;
+    var html = '<div class="grid">';
+    subs.forEach(function (s, si) { html += cardHtml(e, si, s); });
+    html += addHtml() + '</div>';
+    main.innerHTML = html;
+    subs.forEach(function (s, si) { updateCard(e, si); });
+  }
+
+  function cardHtml(e, si, s) {
+    var rows = s.items.map(function (i) {
+      return '<tr data-item="' + i.id + '">' +
+        '<td><input type="text" id="n-' + i.id + '" aria-label="Probaren izena" data-f="name" value="' + esc(i.name) + '"></td>' +
+        '<td><input type="text" inputmode="decimal" class="num" id="w-' + i.id + '" aria-label="Pisua (%)" data-f="w" value="' + (i.w === null ? "" : fmt(i.w, i.w % 1 ? 1 : 0)) + '" placeholder="%"></td>' +
+        '<td><input type="text" inputmode="decimal" class="num" id="g-' + i.id + '" aria-label="Nota" data-f="g" value="' + (i.g === null ? "" : String(i.g).replace(".", ",")) + '" placeholder="–"></td>' +
+        '<td style="text-align:center"><input type="checkbox" id="x-' + i.id + '" aria-label="Igo daiteke" data-f="exam"' + (i.exam ? " checked" : "") + '></td>' +
+        '<td class="needcell"></td>' +
+        '<td><button class="iconbtn" type="button" data-act="delItem" aria-label="Kendu proba">×</button></td></tr>';
+    }).join("");
+    var targetOpts = [5, 6, 7, 8, 9, 10].map(function (t) {
+      return '<option value="' + t + '"' + (Number(s.target) === t ? " selected" : "") + '>' + t + '</option>';
+    }).join("");
+    var c1 = s.euskara ? '<label for="c1-' + e + '"><input type="checkbox" id="c1-' + e + '" data-act="c1"' + (state.c1 ? " checked" : "") + '> C1 agiria daukat (+1 azken notan)</label>' : "";
+    return '<article class="card" data-e="' + e + '" data-si="' + si + '">' +
+      '<div class="card-head"><h2>' + esc(s.name) + '</h2><span class="big" data-out="grade">–</span><span class="chip" data-out="chip">–</span></div>' +
+      '<div class="tbl-wrap"><table class="items"><thead><tr><th>Proba</th><th>Pisua %</th><th>Nota</th><th>Igo daiteke</th><th>Igoeran behar duzu</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<div class="card-foot">' +
+        '<div class="row"><label for="t-' + e + '-' + si + '">Helburua (biribilduta):</label><select id="t-' + e + '-' + si + '" data-act="target">' + targetOpts + '</select>' + c1 + '</div>' +
+        '<div data-out="info" class="note"></div>' +
+        '<div class="row"><button class="btn" type="button" data-act="addItem">+ Gehitu proba</button><span data-out="del"><button class="btn link" type="button" data-act="askDel">Kendu ikasgaia</button></span></div>' +
+      '</div></article>';
+  }
+
+  function addHtml() {
+    var presets = ["Kimika", "Biologia", "Latina", "Geografia", "Artearen historia", "Teknologia", "Marrazketa teknikoa", "Fisika"];
+    return '<section class="add"><h2>Gehitu ikasgaia</h2>' +
+      '<p class="note" style="margin:0">Zure hautazkoa ez badago, gehitu hemen. Ebaluazio guztietan sortuko da, eta probak eta pisuak zuk jarriko dituzu.</p>' +
+      '<div class="row"><label for="newSub" class="note">Izena:</label><input type="text" id="newSub" placeholder="Adib. Kimika"><button class="btn primary" type="button" id="addSub">Gehitu</button></div>' +
+      '<div class="presets">' + presets.map(function (p) { return '<button class="btn" type="button" data-preset="' + esc(p) + '">' + esc(p) + '</button>'; }).join("") + '</div>' +
+      '<div class="note" id="addMsg"></div></section>';
+  }
+
+  function updateCard(e, si) {
+    var card = main.querySelector('.card[data-e="' + e + '"][data-si="' + si + '"]');
+    if (!card) return;
+    var s = state.evals[e].subjects[si];
+    var r = calc(s);
+    card.querySelector('[data-out="grade"]').textContent = fmt(r.grade);
+    var chip = card.querySelector('[data-out="chip"]');
+    chip.className = "chip " + chipClass(r.rounded);
+    chip.textContent = r.rounded === null ? "Notarik ez" : "Biribilduta: " + r.rounded;
+    s.items.forEach(function (i) {
+      var row = card.querySelector('tr[data-item="' + i.id + '"]');
+      if (!row) return;
+      row.querySelector(".needcell").innerHTML = (i.exam && num(i.g) !== null) ? needHtml(r.needs[i.id], num(i.g)) : '<span class="need">–</span>';
+    });
+    var info = [];
+    if (r.evaluated !== null) info.push("%" + Math.round(r.evaluated * 100) + " ebaluatuta");
+    if (r.pendingNeed !== null) {
+      var p = r.pendingNeed;
+      info.push("Falta diren probetan batez beste behar duzu: " + (p <= 0 ? "edozein nota" : p > 10 ? "ezinezkoa (" + fmt(p) + ")" : fmt(p)));
+    }
+    if (r.grade !== null && !r.anyW) info.push("Pisurik gabe: batez besteko soila");
+    if (s.euskara && state.c1 && r.grade !== null) info.push("C1arekin: " + fmt(Math.min(10, r.grade + 1)));
+    var html = esc(info.join(" · "));
+    if (r.anyW && Math.abs(r.wSum - 100) > 0.01) html += (html ? "<br>" : "") + '<span class="warn">Pisuen batura: %' + fmt(r.wSum, r.wSum % 1 ? 1 : 0) + ' (ez da %100)</span>';
+    card.querySelector('[data-out="info"]').innerHTML = html;
+  }
+
+  function courseData() {
+    var base = state.evals[0].subjects;
+    var rows = base.map(function (s) {
+      var gs = state.evals.map(function (ev) {
+        var m = ev.subjects.filter(function (x) { return x.id === s.id; })[0];
+        return m ? calc(m).grade : null;
+      });
+      var have = gs.filter(function (g) { return g !== null; });
+      var a = avg(have);
+      var withB = a === null ? null : Math.min(10, a + bonus(s));
+      return { name: s.name, gs: gs, avg: a, withB: withB, final: withB === null ? null : roundGrade(withB), b: bonus(s) };
+    });
+    var avgs = rows.filter(function (r) { return r.withB !== null; });
+    return { rows: rows, avg: avg(avgs.map(function (r) { return r.withB; })), avgFinal: avg(avgs.map(function (r) { return r.final; })) };
+  }
+
+  function renderCourse() {
+    var c = courseData();
+    var html = '<div class="course tbl-wrap"><table><thead><tr><th>Ikasgaia</th><th>1. eb.</th><th>2. eb.</th><th>3. eb.</th><th>Batez bestekoa</th><th>Azken nota</th></tr></thead><tbody>';
+    c.rows.forEach(function (r) {
+      html += '<tr><td>' + esc(r.name) + (r.b ? ' <span class="chip r10">C1 +1</span>' : '') + '</td>' +
+        r.gs.map(function (g) { return '<td>' + fmt(g) + '</td>'; }).join("") +
+        '<td>' + fmt(r.withB) + '</td><td class="final"><span class="chip ' + chipClass(r.final) + '">' + (r.final === null ? "–" : r.final) + '</span></td></tr>';
+    });
+    html += '</tbody><tfoot><tr><td>Batez bestekoa</td><td></td><td></td><td></td><td>' + fmt(c.avg) + '</td><td>' + fmt(c.avgFinal) + '</td></tr></tfoot></table></div>' +
+      '<p class="note">Azken nota = hiru ebaluazioen batez bestekoa (biribildu gabe), C1aren puntua gehituta, gero biribilduta. Zure ikastetxeak beste modu batera kalkulatzen badu, hartu hau gutxi gorabeherako kalkulu gisa.</p>';
+    main.innerHTML = html;
+  }
+
+  // ---------- gertaerak ----------
+  document.getElementById("tabs").addEventListener("click", function (ev) {
+    var b = ev.target.closest(".tab"); if (!b) return;
+    state.view = b.dataset.view === "course" ? "course" : Number(b.dataset.view);
+    save(); render();
+  });
+
+  main.addEventListener("input", function (ev) {
+    var t = ev.target, card = t.closest(".card"), row = t.closest("tr[data-item]");
+    if (!card || !row || !t.dataset.f) return;
+    var e = Number(card.dataset.e), si = Number(card.dataset.si);
+    var s = state.evals[e].subjects[si];
+    var item = s.items.filter(function (i) { return i.id === row.dataset.item; })[0];
+    if (!item) return;
+    if (t.dataset.f === "name") item.name = t.value;
+    else if (t.dataset.f === "exam") item.exam = t.checked;
+    else {
+      var v = parseInput(t.value);
+      var bad = (v !== null && (isNaN(v) || v < 0 || (t.dataset.f === "g" && v > 10) || (t.dataset.f === "w" && v > 100)));
+      t.classList.toggle("bad", bad);
+      if (bad) return;
+      item[t.dataset.f] = v;
+    }
+    save(); updateCard(e, si); renderSummary();
+  });
+
+  main.addEventListener("change", function (ev) {
+    var t = ev.target, card = t.closest(".card");
+    if (!card) return;
+    var e = Number(card.dataset.e), si = Number(card.dataset.si);
+    var s = state.evals[e].subjects[si];
+    if (t.dataset.act === "target") { s.target = Number(t.value); save(); updateCard(e, si); }
+    if (t.dataset.act === "c1") { state.c1 = t.checked; save(); updateCard(e, si); renderSummary(); }
+    if (t.dataset.f === "exam") { save(); updateCard(e, si); }
+  });
+
+  main.addEventListener("click", function (ev) {
+    var t = ev.target.closest("button"); if (!t) return;
+    var preset = t.dataset.preset;
+    if (preset || t.id === "addSub") {
+      var name = preset || document.getElementById("newSub").value.trim();
+      var msg = document.getElementById("addMsg");
+      if (!name) { msg.textContent = "Idatzi ikasgaiaren izena lehenago."; return; }
+      var exists = state.evals[0].subjects.some(function (s) { return s.name.toLowerCase() === name.toLowerCase(); });
+      if (exists) { msg.textContent = name + " dagoeneko zerrendan dago."; return; }
+      var id = "c" + uid();
+      state.evals.forEach(function (ev2) {
+        ev2.subjects.push({ id: id, name: name, target: 10, items: [it("1. azterketa", 50, true), it("2. azterketa", 50, true)] });
+      });
+      save(); render();
+      return;
+    }
+    var card = t.closest(".card"); if (!card) return;
+    var e = Number(card.dataset.e), si = Number(card.dataset.si);
+    var s = state.evals[e].subjects[si];
+    var act = t.dataset.act;
+    if (act === "addItem") { s.items.push(it("Proba berria", null, false)); save(); render(); }
+    if (act === "delItem") {
+      var rid = t.closest("tr").dataset.item;
+      s.items = s.items.filter(function (i) { return i.id !== rid; }); save(); render();
+    }
+    if (act === "askDel") {
+      card.querySelector('[data-out="del"]').innerHTML = '<span class="confirm"><span class="warn">Ebaluazio guztietatik kendu?</span><button class="btn danger" type="button" data-act="delSub">Bai, kendu</button><button class="btn" type="button" data-act="cancelDel">Utzi</button></span>';
+    }
+    if (act === "cancelDel") { card.querySelector('[data-out="del"]').innerHTML = '<button class="btn link" type="button" data-act="askDel">Kendu ikasgaia</button>'; }
+    if (act === "delSub") {
+      var id = s.id;
+      state.evals.forEach(function (ev2) { ev2.subjects = ev2.subjects.filter(function (x) { return x.id !== id; }); });
+      save(); render();
+    }
+  });
+
+  main.addEventListener("keydown", function (ev) {
+    if (ev.target.id === "newSub" && ev.key === "Enter") { ev.preventDefault(); document.getElementById("addSub").click(); }
+  });
+
+  var resetZone = document.getElementById("resetZone");
+  resetZone.addEventListener("click", function (ev) {
+    var t = ev.target.closest("button"); if (!t) return;
+    if (t.id === "resetBtn") {
+      resetZone.innerHTML = '<span class="confirm">Nota eta aldaketa guztiak ezabatu?<button class="btn danger" type="button" id="resetYes">Bai, ezabatu</button><button class="btn" type="button" id="resetNo">Utzi</button></span>';
+    } else if (t.id === "resetYes") {
+      state = freshState(); save(); render();
+      resetZone.innerHTML = '<button class="btn link" id="resetBtn" type="button">Ezabatu nire notak</button>';
+    } else if (t.id === "resetNo") {
+      resetZone.innerHTML = '<button class="btn link" id="resetBtn" type="button">Ezabatu nire notak</button>';
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
