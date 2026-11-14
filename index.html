@@ -114,7 +114,6 @@ footer { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; g
 <div class="wrap">
   <header>
     <h1>Batxi 2 <span>nota kalkulatzailea</span></h1>
-    <p class="lead">Sartu zure notak eta ikusi ebaluazioko nota, batez bestekoa eta nota igotzeko zer atera behar duzun. Pisuak 1. ebaluaziokoak dira: aldatu itzazu irakasleak beste batzuk ematen baditu. Notak zure nabigatzailean bakarrik gordetzen dira.</p>
   </header>
 
   <nav class="tabs" role="tablist" id="tabs">
@@ -128,7 +127,7 @@ footer { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; g
   <main id="main"></main>
 
   <footer>
-    <span>Igoeran behar duzun nota: azterketa hori bakarrik errepikatuta, gainerakoak berdin mantenduta.</span>
+    <span></span>
     <span id="resetZone"><button class="btn link" id="resetBtn" type="button">Ezabatu nire notak</button></span>
   </footer>
 </div>
@@ -214,7 +213,7 @@ footer { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; g
   function needHtml(v, g) {
     if (v === undefined || v === null) return '<span class="need">–</span>';
     if (v <= g + 1e-9) return '<span class="need ok">Ez da behar</span>';
-    if (v > 10 + 1e-9) return '<span class="need no">Ezinezkoa (' + fmt(v) + ')</span>';
+    if (v > 10 + 1e-9) return '<span class="need no">Ezinezkoa</span>';
     return '<span class="need go">' + fmt(v) + '</span>';
   }
 
@@ -232,7 +231,7 @@ footer { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; g
 
   function settingsHtml() {
     return '<div class="settings">' +
-      '<label for="roundFrom">Biribiltzea, hamartarra hemendik gora:</label>' +
+      '<label for="roundFrom">Biribiltzea:</label>' +
       '<select id="roundFrom">' + [0.5, 0.6, 0.7, 0.8, 0.9].map(function (v) {
         return '<option value="' + v + '"' + (state.roundFrom === v ? " selected" : "") + '>' + fmt(v, 1) + '</option>';
       }).join("") + '</select></div>';
@@ -242,12 +241,11 @@ footer { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; g
     var html = "";
     if (state.view === "course") {
       var c = courseData();
-      html += stat("Ikasturteko batez bestekoa", fmt(c.avg)) + stat("Azken noten batez bestekoa", fmt(c.avgFinal));
+      html += stat("Batez bestekoa", fmt(c.avg)) + stat("Biribilduta", fmt(c.avgFinal));
     } else {
       var subs = state.evals[state.view].subjects, gs = [], rs = [];
       subs.forEach(function (s) { var r = calc(s); if (r.grade !== null) { gs.push(r.grade); rs.push(r.rounded); } });
-      html += stat("Ebaluazioko batez bestekoa", fmt(avg(gs))) + stat("Biribildutako noten batez bestekoa", fmt(avg(rs))) +
-        stat("Notadun ikasgaiak", gs.length + " / " + subs.length);
+      html += stat("Batez bestekoa", fmt(avg(gs))) + stat("Biribilduta", fmt(avg(rs)));
     }
     summary.innerHTML = html + settingsHtml();
     document.getElementById("roundFrom").addEventListener("change", function (e) {
@@ -279,22 +277,21 @@ footer { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; g
     var targetOpts = [5, 6, 7, 8, 9, 10].map(function (t) {
       return '<option value="' + t + '"' + (Number(s.target) === t ? " selected" : "") + '>' + t + '</option>';
     }).join("");
-    var c1 = s.euskara ? '<label for="c1-' + e + '"><input type="checkbox" id="c1-' + e + '" data-act="c1"' + (state.c1 ? " checked" : "") + '> C1 agiria daukat (+1 azken notan)</label>' : "";
+    var c1 = s.euskara ? '<label for="c1-' + e + '"><input type="checkbox" id="c1-' + e + '" data-act="c1"' + (state.c1 ? " checked" : "") + '> C1 (+1)</label>' : "";
     return '<article class="card" data-e="' + e + '" data-si="' + si + '">' +
       '<div class="card-head"><h2>' + esc(s.name) + '</h2><span class="big" data-out="grade">–</span><span class="chip" data-out="chip">–</span></div>' +
-      '<div class="tbl-wrap"><table class="items"><thead><tr><th>Proba</th><th>Pisua %</th><th>Nota</th><th>Igo daiteke</th><th>Igoeran behar duzu</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<div class="tbl-wrap"><table class="items"><thead><tr><th>Proba</th><th>Pisua %</th><th>Nota</th><th>Igo</th><th>Igoeran</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
       '<div class="card-foot">' +
-        '<div class="row"><label for="t-' + e + '-' + si + '">Helburua (biribilduta):</label><select id="t-' + e + '-' + si + '" data-act="target">' + targetOpts + '</select>' + c1 + '</div>' +
+        '<div class="row"><label for="t-' + e + '-' + si + '">Helburua:</label><select id="t-' + e + '-' + si + '" data-act="target">' + targetOpts + '</select>' + c1 + '</div>' +
         '<div data-out="info" class="note"></div>' +
-        '<div class="row"><button class="btn" type="button" data-act="addItem">+ Gehitu proba</button><span data-out="del"><button class="btn link" type="button" data-act="askDel">Kendu ikasgaia</button></span></div>' +
+        '<div class="row"><button class="btn" type="button" data-act="addItem">+ Proba</button><span data-out="del"><button class="btn link" type="button" data-act="askDel">Kendu</button></span></div>' +
       '</div></article>';
   }
 
   function addHtml() {
     var presets = ["Kimika", "Biologia", "Latina", "Geografia", "Artearen historia", "Teknologia", "Marrazketa teknikoa", "Fisika"];
     return '<section class="add"><h2>Gehitu ikasgaia</h2>' +
-      '<p class="note" style="margin:0">Zure hautazkoa ez badago, gehitu hemen. Ebaluazio guztietan sortuko da, eta probak eta pisuak zuk jarriko dituzu.</p>' +
-      '<div class="row"><label for="newSub" class="note">Izena:</label><input type="text" id="newSub" placeholder="Adib. Kimika"><button class="btn primary" type="button" id="addSub">Gehitu</button></div>' +
+            '<div class="row"><input type="text" id="newSub" aria-label="Ikasgaiaren izena" placeholder="Izena"><button class="btn primary" type="button" id="addSub">Gehitu</button></div>' +
       '<div class="presets">' + presets.map(function (p) { return '<button class="btn" type="button" data-preset="' + esc(p) + '">' + esc(p) + '</button>'; }).join("") + '</div>' +
       '<div class="note" id="addMsg"></div></section>';
   }
@@ -307,22 +304,21 @@ footer { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; g
     card.querySelector('[data-out="grade"]').textContent = fmt(r.grade);
     var chip = card.querySelector('[data-out="chip"]');
     chip.className = "chip " + chipClass(r.rounded);
-    chip.textContent = r.rounded === null ? "Notarik ez" : "Biribilduta: " + r.rounded;
+    chip.textContent = r.rounded === null ? "–" : String(r.rounded);
     s.items.forEach(function (i) {
       var row = card.querySelector('tr[data-item="' + i.id + '"]');
       if (!row) return;
       row.querySelector(".needcell").innerHTML = (i.exam && num(i.g) !== null) ? needHtml(r.needs[i.id], num(i.g)) : '<span class="need">–</span>';
     });
     var info = [];
-    if (r.evaluated !== null) info.push("%" + Math.round(r.evaluated * 100) + " ebaluatuta");
+    if (r.evaluated !== null && r.evaluated < 0.999) info.push("%" + Math.round(r.evaluated * 100) + " eginda");
     if (r.pendingNeed !== null) {
       var p = r.pendingNeed;
-      info.push("Falta diren probetan batez beste behar duzu: " + (p <= 0 ? "edozein nota" : p > 10 ? "ezinezkoa (" + fmt(p) + ")" : fmt(p)));
+      info.push("Faltan: " + (p <= 0 ? "edozein" : p > 10 ? "ezinezkoa" : fmt(p)));
     }
-    if (r.grade !== null && !r.anyW) info.push("Pisurik gabe: batez besteko soila");
-    if (s.euskara && state.c1 && r.grade !== null) info.push("C1arekin: " + fmt(Math.min(10, r.grade + 1)));
+        if (s.euskara && state.c1 && r.grade !== null) info.push("C1: " + fmt(Math.min(10, r.grade + 1)));
     var html = esc(info.join(" · "));
-    if (r.anyW && Math.abs(r.wSum - 100) > 0.01) html += (html ? "<br>" : "") + '<span class="warn">Pisuen batura: %' + fmt(r.wSum, r.wSum % 1 ? 1 : 0) + ' (ez da %100)</span>';
+    if (r.anyW && Math.abs(r.wSum - 100) > 0.01) html += (html ? "<br>" : "") + '<span class="warn">Pisuak: %' + fmt(r.wSum, r.wSum % 1 ? 1 : 0) + '</span>';
     card.querySelector('[data-out="info"]').innerHTML = html;
   }
 
@@ -346,12 +342,11 @@ footer { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; g
     var c = courseData();
     var html = '<div class="course tbl-wrap"><table><thead><tr><th>Ikasgaia</th><th>1. eb.</th><th>2. eb.</th><th>3. eb.</th><th>Batez bestekoa</th><th>Azken nota</th></tr></thead><tbody>';
     c.rows.forEach(function (r) {
-      html += '<tr><td>' + esc(r.name) + (r.b ? ' <span class="chip r10">C1 +1</span>' : '') + '</td>' +
+      html += '<tr><td>' + esc(r.name) + (r.b ? ' <span class="chip r10">C1</span>' : '') + '</td>' +
         r.gs.map(function (g) { return '<td>' + fmt(g) + '</td>'; }).join("") +
         '<td>' + fmt(r.withB) + '</td><td class="final"><span class="chip ' + chipClass(r.final) + '">' + (r.final === null ? "–" : r.final) + '</span></td></tr>';
     });
-    html += '</tbody><tfoot><tr><td>Batez bestekoa</td><td></td><td></td><td></td><td>' + fmt(c.avg) + '</td><td>' + fmt(c.avgFinal) + '</td></tr></tfoot></table></div>' +
-      '<p class="note">Azken nota = hiru ebaluazioen batez bestekoa (biribildu gabe), C1aren puntua gehituta, gero biribilduta. Zure ikastetxeak beste modu batera kalkulatzen badu, hartu hau gutxi gorabeherako kalkulu gisa.</p>';
+    html += '</tbody><tfoot><tr><td>Batez bestekoa</td><td></td><td></td><td></td><td>' + fmt(c.avg) + '</td><td>' + fmt(c.avgFinal) + '</td></tr></tfoot></table></div>';
     main.innerHTML = html;
   }
 
@@ -417,9 +412,9 @@ footer { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; g
       s.items = s.items.filter(function (i) { return i.id !== rid; }); save(); render();
     }
     if (act === "askDel") {
-      card.querySelector('[data-out="del"]').innerHTML = '<span class="confirm"><span class="warn">Ebaluazio guztietatik kendu?</span><button class="btn danger" type="button" data-act="delSub">Bai, kendu</button><button class="btn" type="button" data-act="cancelDel">Utzi</button></span>';
+      card.querySelector('[data-out="del"]').innerHTML = '<span class="confirm"><button class="btn danger" type="button" data-act="delSub">Kendu</button><button class="btn" type="button" data-act="cancelDel">Utzi</button></span>';
     }
-    if (act === "cancelDel") { card.querySelector('[data-out="del"]').innerHTML = '<button class="btn link" type="button" data-act="askDel">Kendu ikasgaia</button>'; }
+    if (act === "cancelDel") { card.querySelector('[data-out="del"]').innerHTML = '<button class="btn link" type="button" data-act="askDel">Kendu</button>'; }
     if (act === "delSub") {
       var id = s.id;
       state.evals.forEach(function (ev2) { ev2.subjects = ev2.subjects.filter(function (x) { return x.id !== id; }); });
@@ -435,7 +430,7 @@ footer { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; g
   resetZone.addEventListener("click", function (ev) {
     var t = ev.target.closest("button"); if (!t) return;
     if (t.id === "resetBtn") {
-      resetZone.innerHTML = '<span class="confirm">Nota eta aldaketa guztiak ezabatu?<button class="btn danger" type="button" id="resetYes">Bai, ezabatu</button><button class="btn" type="button" id="resetNo">Utzi</button></span>';
+      resetZone.innerHTML = '<span class="confirm"><button class="btn danger" type="button" id="resetYes">Ezabatu</button><button class="btn" type="button" id="resetNo">Utzi</button></span>';
     } else if (t.id === "resetYes") {
       state = freshState(); save(); render();
       resetZone.innerHTML = '<button class="btn link" id="resetBtn" type="button">Ezabatu nire notak</button>';
